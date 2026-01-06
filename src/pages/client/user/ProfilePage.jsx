@@ -14,14 +14,17 @@ import {
 import { UploadOutlined } from "@ant-design/icons";
 import { useEffect } from "react";
 import { useUserSelector, useUserStore } from "../../../store/useUserStore";
-import { useAuthSelector } from "../../../store/useAuthStore";
+import { useAuthSelector, useAuthStore } from "../../../store/useAuthStore";
 
 const ProfilePage = () => {
   const profile = useUserSelector((s) => s.profile);
   const [form] = Form.useForm();
   const setProfile = useUserStore((s) => s.setProfile);
   const updateProfile = useUserStore((s) => s.updateProfile);
+  const currentTickets = useUserStore((s) => s.tickets);
+  const doLogin = useAuthStore((s) => s.doLogin);
   const authUser = useAuthSelector((s) => s.user);
+  const authToken = useAuthSelector((s) => s.token);
 
   useEffect(() => {
     if (!profile && authUser) setProfile(authUser);
@@ -35,9 +38,19 @@ const ProfilePage = () => {
 
   const onFinish = async (values) => {
     try {
-      const payload = { ...profile, ...values };
+      const payload = {
+        ...profile,
+        ...values,
+        tickets: currentTickets || profile?.tickets || [],
+      };
       const res = await updateProfile(payload);
       if (res?.data) {
+        // Update auth store so the whole app sees updated user
+        try {
+          doLogin(authToken, res.data);
+        } catch (err) {
+          // ignore
+        }
         message.success("Cập nhật thông tin thành công");
       }
     } catch {

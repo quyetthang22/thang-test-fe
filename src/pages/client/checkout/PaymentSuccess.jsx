@@ -19,10 +19,10 @@ import { ORDER_STATUS } from "../../../common/constants/order";
 import { QUERY } from "../../../common/constants/queryKey";
 import { getDetailOrder } from "../../../common/services/order.service";
 import { formatCurrency } from "../../../common/utils";
-import { useRef } from "react";
+import { useRef, useEffect } from "react";
 import * as htmlToImage from "html-to-image";
-import { useEffect } from "react";
 import { useUserStore } from "../../../store/useUserStore";
+import { useAuthSelector } from "../../../store/useAuthStore";
 
 const PaymentSuccess = () => {
   const { id } = useParams();
@@ -30,14 +30,31 @@ const PaymentSuccess = () => {
     queryKey: [QUERY.ORDER, id],
     queryFn: () => getDetailOrder(id),
   });
+
   const addTicket = useUserStore((s) => s.addTicket);
+  const updateProfile = useUserStore((s) => s.updateProfile);
+  const authUser = useAuthSelector((s) => s.user);
 
   useEffect(() => {
-    if (data?.data) {
-      // Persist ticket to local user ticket history
-      addTicket(data.data);
-    }
-  }, [data?.data]);
+    if (!data?.data) return;
+
+    // Persist ticket to local user ticket history
+    addTicket(data.data);
+
+    // If user is logged in, persist the ticket into backend user profile
+    (async () => {
+      try {
+        if (authUser && authUser._id) {
+          const nextTickets = [data.data, ...(authUser.tickets || [])];
+          const payload = { ...authUser, tickets: nextTickets };
+          await updateProfile(payload);
+        }
+      } catch (err) {
+        console.error("Persist ticket to user failed", err);
+      }
+    })();
+  }, [data?.data, authUser, addTicket, updateProfile]);
+
   const ticketRef = useRef(null);
   const handleSaveImage = async () => {
     if (!ticketRef.current) return;
@@ -54,6 +71,7 @@ const PaymentSuccess = () => {
       console.error("Lưu vé thất bại:", error);
     }
   };
+
   return (
     <div className="mt-8 py-8">
       <div className="flex items-center flex-col">
@@ -73,6 +91,7 @@ const PaymentSuccess = () => {
           </Link>
         </div>
       </div>
+
       <div ref={ticketRef}>
         <div
           className="min-h-screen max-w-7xl xl:mx-auto mx-6 grid gap-4"
@@ -112,6 +131,7 @@ const PaymentSuccess = () => {
                         </p>
                       </div>
                     </div>
+
                     <div className="flex items-center gap-2">
                       <div className="bg-blue-400/30 text-blue-500 px-3 py-3 rounded-lg justify-center flex items-center">
                         <ClockCircleOutlined />
@@ -125,6 +145,7 @@ const PaymentSuccess = () => {
                         </p>
                       </div>
                     </div>
+
                     <div className="flex items-center gap-2">
                       <div
                         style={{
@@ -154,6 +175,7 @@ const PaymentSuccess = () => {
                 </div>
               </div>
             </Card>
+
             <Card
               className="shadow-md! mt-6!"
               title={
@@ -164,7 +186,7 @@ const PaymentSuccess = () => {
               }
             >
               <div className="flex items-center gap-4">
-                {data?.data?.seats.map((item, index) => (
+                {data?.data?.seats?.map((item, index) => (
                   <div
                     key={index}
                     className="bg-blue-500 px-2 py-2 rounded-md text-white"
@@ -174,6 +196,7 @@ const PaymentSuccess = () => {
                 ))}
               </div>
             </Card>
+
             <Card
               className="shadow-md! mt-6!"
               title={
@@ -192,6 +215,7 @@ const PaymentSuccess = () => {
               </div>
             </Card>
           </div>
+
           <div>
             <Card
               className="shadow-md! mt-6!"
@@ -214,6 +238,7 @@ const PaymentSuccess = () => {
                     {data?.data?.customerInfo?.userName}
                   </p>
                 </div>
+
                 <div className="flex flex-col gap-1">
                   <div className="text-xs text-gray-500 flex items-center gap-2">
                     <PhoneOutlined />
@@ -223,6 +248,7 @@ const PaymentSuccess = () => {
                     {data?.data?.customerInfo?.phone}
                   </p>
                 </div>
+
                 <div className="flex flex-col gap-1">
                   <div className="text-xs text-gray-500 flex items-center gap-2">
                     <MailOutlined />
@@ -232,6 +258,7 @@ const PaymentSuccess = () => {
                     {data?.data?.customerInfo?.email}
                   </p>
                 </div>
+
                 <div className="flex flex-col gap-1">
                   <div className="text-xs text-gray-500 flex items-center gap-2">
                     <ShoppingCartOutlined />
@@ -243,6 +270,7 @@ const PaymentSuccess = () => {
                 </div>
               </div>
             </Card>
+
             <Card
               className="shadow-md! mt-6!"
               title={
@@ -275,4 +303,5 @@ const PaymentSuccess = () => {
     </div>
   );
 };
+
 export default PaymentSuccess;

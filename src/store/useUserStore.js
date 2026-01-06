@@ -9,10 +9,19 @@ export const useUserStore = create(
       (set, get) => ({
         profile: null,
         tickets: [],
-        setProfile: (profile) => set({ profile }),
+        setProfile: (profile) =>
+          set({ profile, tickets: profile?.tickets ? profile.tickets : [] }),
         updateProfile: async (payload) => {
+          const { tickets: currentTickets } = get();
           const res = await apiUpdateUser(payload);
-          if (res?.data) set({ profile: res.data });
+          if (res?.data) {
+            // Preserve tickets: prefer returned tickets, otherwise keep existing
+            const returnedTickets = res.data.tickets;
+            set({
+              profile: res.data,
+              tickets: returnedTickets ? returnedTickets : currentTickets,
+            });
+          }
           return res;
         },
         addTicket: (ticket) => {
