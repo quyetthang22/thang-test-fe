@@ -1,6 +1,7 @@
 import {
   ClockCircleOutlined,
   CreditCardOutlined,
+  DownloadOutlined,
   EnvironmentOutlined,
   QrcodeOutlined,
   StopFilled,
@@ -8,14 +9,38 @@ import {
   VideoCameraOutlined,
   ShoppingCartOutlined,
 } from "@ant-design/icons";
-import { Card, Empty, Collapse, QRCode } from "antd";
+import { Card, Empty, Collapse, QRCode, Button, message } from "antd";
 import { useUserSelector } from "../../../store/useUserStore";
 import dayjs from "dayjs";
 import { ORDER_STATUS } from "../../../common/constants/order";
 import { formatCurrency } from "../../../common/utils";
+import * as htmlToImage from "html-to-image";
 
 const MyTicketsPage = () => {
   const tickets = useUserSelector((s) => s.tickets || []);
+
+  const handleSaveTicket = async (item, idx) => {
+    const id = `ticket-${item?.ticketId || idx}`;
+    const node = document.getElementById(id);
+    if (!node) {
+      message.error("Không tìm thấy vé để lưu.");
+      return;
+    }
+    try {
+      const dataUrl = await htmlToImage.toPng(node, {
+        quality: 1,
+        pixelRatio: 2,
+      });
+      const link = document.createElement("a");
+      link.download = `ve-${item?.ticketId || Date.now()}.png`;
+      link.href = dataUrl;
+      link.click();
+      message.success("Đã lưu vé");
+    } catch (err) {
+      console.error(err);
+      message.error("Lưu vé thất bại");
+    }
+  };
 
   return (
     <div className="mt-8 py-8">
@@ -60,11 +85,21 @@ const MyTicketsPage = () => {
                           {ORDER_STATUS[item?.status]?.label}
                         </span>
                       </div>
+                      <div className="mt-2 flex justify-end">
+                        <Button
+                          size="small"
+                          icon={<DownloadOutlined />}
+                          onClick={() => handleSaveTicket(item, idx)}
+                        >
+                          Lưu vé
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 }
               >
                 <div
+                  id={`ticket-${item?.ticketId || idx}`}
                   className="min-h-screen max-w-7xl xl:mx-auto mx-0 grid gap-4"
                   style={{ gridTemplateColumns: "2fr 1fr" }}
                 >

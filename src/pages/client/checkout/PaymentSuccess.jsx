@@ -23,6 +23,7 @@ import { useRef, useEffect } from "react";
 import * as htmlToImage from "html-to-image";
 import { useUserStore } from "../../../store/useUserStore";
 import { useAuthSelector } from "../../../store/useAuthStore";
+import api from "../../../common/utils/api";
 
 const PaymentSuccess = () => {
   const { id } = useParams();
@@ -32,28 +33,26 @@ const PaymentSuccess = () => {
   });
 
   const addTicket = useUserStore((s) => s.addTicket);
-  const updateProfile = useUserStore((s) => s.updateProfile);
   const authUser = useAuthSelector((s) => s.user);
 
   useEffect(() => {
     if (!data?.data) return;
 
-    // Persist ticket to local user ticket history
     addTicket(data.data);
 
-    // If user is logged in, persist the ticket into backend user profile
     (async () => {
       try {
-        if (authUser && authUser._id) {
-          const nextTickets = [data.data, ...(authUser.tickets || [])];
-          const payload = { ...authUser, tickets: nextTickets };
-          await updateProfile(payload);
+        const code = data.data.codePayment || data.data.orderCode;
+        if (code) {
+          await api.get(`/order/return`, {
+            params: { orderCode: code, status: "SUCCESS" },
+          });
         }
       } catch (err) {
-        console.error("Persist ticket to user failed", err);
+        console.error("Trigger backend return failed", err);
       }
     })();
-  }, [data?.data, authUser, addTicket, updateProfile]);
+  }, [data?.data, authUser, addTicket]);
 
   const ticketRef = useRef(null);
   const handleSaveImage = async () => {
